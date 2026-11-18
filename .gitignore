@@ -1,0 +1,35 @@
+# ── Bog'liqliklar ─────────────────────────────
+node_modules/
+
+# ── Build natijalari ──────────────────────────
+/dist/
+target/
+*.tsbuildinfo
+# Tauri avtomatik yaratadigan sxemalar
+src-tauri/gen/
+
+# ── Maxfiy ma'lumotlar ────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+# Lokal akkaunt sozlamalari (testlarda yaratilishi mumkin)
+account.json
+
+# ── Muharrir va OS ────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# ── Loglar ────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Claude Code lokal sozlamalari ─────────────
+.claude/settings.local.json
