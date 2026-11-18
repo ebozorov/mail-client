@@ -1,0 +1,89 @@
+# Testlar: har push/PR'da va release'dan oldin (release.yml chaqiradi)
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  frontend:
+    name: Frontend (types + build)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc -b
+      - run: npx vite build
+
+  core:
+    name: mail-core (lint + unit + IMAP/SMTP)
+    runs-on: ubuntu-24.04
+    services:
+      # Haqiqiy IMAP/SMTP test serveri (tests/greenmail.rs, tests/service.rs)
+      greenmail:
+        image: greenmail/standalone:2.1.2
+        ports:
+          - 3025:3025
+          - 3143:3143
+        env:
+          GREENMAIL_OPTS: >-
+            -Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0
+            -Dgreenmail.users=me:secret@example.org,bob:secret@example.org
+            -Dgreenmail.users.login=email
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy -p mail-core --all-targets --locked -- -D warnings
+      - name: Wait for GreenMail
+        shell: bash
+        run: |
+          for _ in $(seq 100); do
+            (exec 3<>/dev/tcp/127.0.0.1/3143 && read -t 2 -r line <&3 && [[ $line == "* OK"* ]]) 2>/dev/null && exit 0
+            sleep 0.5
+          done
+          echo "GreenMail did not start"; exit 1
+      - name: Test
+        run: cargo test -p mail-core --locked
+        env:
+          GREENMAIL: "1"
+
+  desktop:
+    name: Desktop app (Tauri compile)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libxdo-dev libssl-dev \
+            libayatana-appindicator3-dev librsvg2-dev
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: npm ci
+      - run: npx vite build
+      - name: Clippy
+        run: cargo clippy -p mail-client --locked -- -D warnings
