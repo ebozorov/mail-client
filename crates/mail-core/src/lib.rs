@@ -1,11 +1,13 @@
 //! Pochta mantig'i: avtomatik sozlash, IMAP (o'qish) va SMTP (yuborish).
 //! Tauri'ga bog'liq emas — mustaqil test qilinadi.
 
+pub mod app;
 pub mod config;
 pub mod discover;
 pub mod error;
 pub mod imap;
 pub mod message;
+pub mod secrets;
 pub mod smtp;
 mod tls;
 
